@@ -1,0 +1,214 @@
+﻿@page "/"
+@using System.Collections.Generic;
+@inject IJSRuntime JSRuntime;
+
+@if (currentStep == Step.ParticipantRegistration)
+{
+    <div>
+        <button disabled="@(participants.Count < 3)" class="btn btn-primary" @onclick="NextStep">Neste</button>
+    </div>
+
+    <form @onsubmit="OnAddParticipantSubmit">
+        <input type="text" @bind="nameInput" @bind:event="oninput" />
+        <input type="submit" value="Legg til" class="btn btn-secondary" disabled="@(string.IsNullOrEmpty(nameInput))" />
+    </form>
+}
+
+@if (currentStep == Step.NumberRegistration)
+{
+    <div style="text-align: center; margin-top: 80px;">
+    @if (CurrentParticipant != null)
+    {
+        <div>
+            <h1 class="strokeme" @onclick="OnNissenClick">@CurrentParticipant.Name</h1>
+        </div>
+
+        <form @onsubmit="OnRegisterNumberClick">
+            <input type="number" @bind="numberInput" />
+            <input type="submit" value="Registrer gave" class="btn btn-primary" />
+        </form>
+    }
+    else
+    {
+        <div><button class="btn btn-primary" @onclick="NextStep">Ferdig</button></div>
+    }
+    </div>
+}
+
+@if (showParticipantTable || currentStep != Step.NumberRegistration)
+{
+    <table class="table strokeme" style="font-size: x-large; width: 70%; margin: auto; margin-top: 100px; margin-bottom: 100px;">
+        <col width="50%">
+        <col width="50%">
+        <tbody>
+            @foreach (var participant in participants)
+            {
+                <tr>
+                    <td class="@(participant.OwnNumber != null ? "font-weight-bold" : "")" @onclick="args => OnNameClick(args, participant)">@participant.Name</td>
+                    @if (currentStep == Step.GiftAssignment)
+                    {
+                        @if (participant.Revealed)
+                        {
+                            <td class="font-weight-bolder">@participant.AssignedNumber</td>
+                        }
+                        else
+                        {
+                            <td><button class="btn btn-primary" @onclick="() => participant.Revealed = true">Gi gave!</button></td>
+                        }
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+
+@code {
+
+    private Step currentStep = Step.ParticipantRegistration;
+    private List<Participant> participants = new List<Participant>();
+    private bool showParticipantTable = false;
+
+    private string nameInput;
+    private string numberInput;
+
+    private Participant CurrentParticipant => participants.Where(p => p.OwnNumber == null).FirstOrDefault();
+
+    public Nissen()
+    {
+        //currentStep = Step.NumberRegistration;
+        //participants.Add(new Participant("Per") { OwnNumber = 1, AssignedNumber = 4 });
+        //participants.Add(new Participant("Kari") { OwnNumber = 2, AssignedNumber = 3 });
+        //participants.Add(new Participant("Kjell") { OwnNumber = 3, AssignedNumber = 2 });
+        //participants.Add(new Participant("Satan") { OwnNumber = null, AssignedNumber = null });
+        //participants.Add(new Participant("Bob") { OwnNumber = null, AssignedNumber = null });
+        //participants.Add(new Participant("Donald") { OwnNumber = null, AssignedNumber = null });
+    }
+
+    private void OnAddParticipantSubmit()
+    {
+        Console.WriteLine("submit");
+        AddParticipant(nameInput);
+        nameInput = null;
+    }
+
+    private void OnNissenClick(MouseEventArgs args)
+    {
+        if (args.Detail == 3)
+        {
+            showParticipantTable = !showParticipantTable;
+        }
+    }
+
+    private void AddParticipant(string name)
+    {
+        if (string.IsNullOrEmpty(name))
+        {
+            return;
+        }
+        if (participants.Any(p => p.Name == name))
+        {
+            Alert("Angi et unikt navn");
+            return;
+        }
+        participants.Add(new Participant(name));
+    }
+
+    private void OnRegisterNumberClick()
+    {
+        if (int.TryParse(numberInput, out var parsedNumber))
+        {
+            CurrentParticipant.OwnNumber = parsedNumber;
+            numberInput = null;
+        }
+        else
+        {
+            Alert($"Ugyldig verdi. Skriv inn kun tall");
+            numberInput = "";
+        }
+    }
+
+    private void OnNameClick(MouseEventArgs args, Participant target)
+    {
+        if (currentStep != Step.GiftAssignment && args.Detail == 3)
+        {
+            target.OwnNumber = null;
+        }
+    }
+
+    private void NextStep(MouseEventArgs args)
+    {
+        if (args.Detail != 3)
+        {
+            return;
+        }
+
+        if (Enum.IsDefined(typeof(Step), currentStep + 1))
+        {
+            currentStep++;
+        }
+
+        if (currentStep == Step.GiftAssignment)
+        {
+            AssignRandom();
+        }
+    }
+
+    private void AssignRandom()
+    {
+        if (participants.Select(p => p.OwnNumber).Distinct().Count() != participants.Count)
+        {
+            Alert("Noen skrev inn samme tall");
+            participants.ForEach(p => p.OwnNumber = null);
+            currentStep = Step.NumberRegistration;
+            return;
+        }
+
+        var random = new Random();
+        var numbers = participants.Select(p => p.OwnNumber).ToList();
+
+        foreach (var participant in participants)
+        {
+            var potentialNumbers = numbers.Where(n => n != participant.OwnNumber).ToList();
+            if (potentialNumbers.Count == 0)
+            {
+                Console.WriteLine("Retry");
+                AssignRandom();
+                return;
+            }
+            var selection = potentialNumbers[random.Next(potentialNumbers.Count)] ?? -1;
+            numbers.Remove(selection);
+            participant.AssignedNumber = selection;
+        }
+    }
+
+    private void Alert(string value)
+    {
+        JSRuntime.InvokeVoidAsync("alert", value);
+    }
+
+    class Participant
+    {
+        public string Name { get; }
+        public int? OwnNumber { get; set; }
+        public int? AssignedNumber { get; set; }
+        public bool Revealed { get; set; }
+
+        public Participant(string name)
+        {
+            this.Name = name;
+        }
+
+        public override string ToString()
+        {
+            return Name;
+        }
+    }
+
+    enum Step
+    {
+        ParticipantRegistration,
+        NumberRegistration,
+        GiftAssignment
+    }
+}

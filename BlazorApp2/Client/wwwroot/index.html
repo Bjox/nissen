@@ -1,0 +1,33 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Nissen</title>
+    <base href="/" />
+    <link href="css/bootstrap/bootstrap.min.css" rel="stylesheet" />
+    <link href="css/site.css" rel="stylesheet" />
+    <link rel="manifest" href="/manifest.json">
+
+    <script>
+        window.addEventListener("beforeunload", function (e) {
+            var confirmationMessage = 'Sikker på at du vil starte på nytt?';
+            (e || window.event).returnValue = confirmationMessage; //Gecko + IE
+            return confirmationMessage; //Gecko + Webkit, Safari, Chrome etc.
+        });
+    </script>
+</head>
+
+<body>
+    <app>Loading...</app>
+
+    <div id="blazor-error-ui">
+        An unhandled error has occurred.
+        <a href class="reload">Reload</a>
+        <a class="dismiss">🗙</a>
+    </div>
+    <script src="_framework/blazor.webassembly.js"></script>
+</body>
+
+</html>
