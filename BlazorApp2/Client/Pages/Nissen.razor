@@ -1,5 +1,6 @@
 ﻿@page "/"
 @using System.Collections.Generic;
+@using BlazorApp2.Shared;
 @inject IJSRuntime JSRuntime;
 
 @if (currentStep == Step.ParticipantRegistration)
@@ -30,6 +31,9 @@
     }
     else
     {
+        <div>
+            <h1 class="strokeme" @onclick="OnNissenClick">Ferdig!</h1>
+        </div>
         <div><button class="btn btn-primary" @onclick="NextStep">Ferdig</button></div>
     }
     </div>
@@ -56,6 +60,13 @@
                             <td><button class="btn btn-primary" @onclick="() => participant.Revealed = true">Gi gave!</button></td>
                         }
                     }
+                    else
+                    {
+                        <td>
+                            <label>Tildeling: </label>
+                            <input style="width: 50%" type="number" @bind="participant.AssignedNumber" />
+                        </td>
+                    }
                 </tr>
             }
         </tbody>
@@ -76,13 +87,13 @@
 
     public Nissen()
     {
-        //currentStep = Step.NumberRegistration;
-        //participants.Add(new Participant("Per") { OwnNumber = 1, AssignedNumber = 4 });
-        //participants.Add(new Participant("Kari") { OwnNumber = 2, AssignedNumber = 3 });
-        //participants.Add(new Participant("Kjell") { OwnNumber = 3, AssignedNumber = 2 });
-        //participants.Add(new Participant("Satan") { OwnNumber = null, AssignedNumber = null });
-        //participants.Add(new Participant("Bob") { OwnNumber = null, AssignedNumber = null });
-        //participants.Add(new Participant("Donald") { OwnNumber = null, AssignedNumber = null });
+        currentStep = Step.NumberRegistration;
+        participants.Add(new Participant("Per") { OwnNumber = null, AssignedNumber = null });
+        participants.Add(new Participant("Kari") { OwnNumber = null, AssignedNumber = null });
+        participants.Add(new Participant("Kjell") { OwnNumber = null, AssignedNumber = null });
+        participants.Add(new Participant("Satan") { OwnNumber = null, AssignedNumber = null });
+        participants.Add(new Participant("Bob") { OwnNumber = null, AssignedNumber = null });
+        participants.Add(new Participant("Donald") { OwnNumber = null, AssignedNumber = null });
     }
 
     private void OnAddParticipantSubmit()
@@ -128,6 +139,11 @@
         }
     }
 
+    private void OnManualAssignment()
+    {
+        Alert("ok");
+    }
+
     private void OnNameClick(MouseEventArgs args, Participant target)
     {
         if (currentStep != Step.GiftAssignment && args.Detail == 3)
@@ -150,59 +166,18 @@
 
         if (currentStep == Step.GiftAssignment)
         {
-            AssignRandom();
-        }
-    }
-
-    private void AssignRandom()
-    {
-        if (participants.Select(p => p.OwnNumber).Distinct().Count() != participants.Count)
-        {
-            Alert("Noen skrev inn samme tall");
-            participants.ForEach(p => p.OwnNumber = null);
-            currentStep = Step.NumberRegistration;
-            return;
-        }
-
-        var random = new Random();
-        var numbers = participants.Select(p => p.OwnNumber).ToList();
-
-        foreach (var participant in participants)
-        {
-            var potentialNumbers = numbers.Where(n => n != participant.OwnNumber).ToList();
-            if (potentialNumbers.Count == 0)
+            var errorMessage = Logic.AssignRandom(participants);
+            if (!string.IsNullOrEmpty(errorMessage))
             {
-                Console.WriteLine("Retry");
-                AssignRandom();
-                return;
+                Alert(errorMessage);
+                currentStep = Step.NumberRegistration;
             }
-            var selection = potentialNumbers[random.Next(potentialNumbers.Count)] ?? -1;
-            numbers.Remove(selection);
-            participant.AssignedNumber = selection;
         }
     }
 
     private void Alert(string value)
     {
         JSRuntime.InvokeVoidAsync("alert", value);
-    }
-
-    class Participant
-    {
-        public string Name { get; }
-        public int? OwnNumber { get; set; }
-        public int? AssignedNumber { get; set; }
-        public bool Revealed { get; set; }
-
-        public Participant(string name)
-        {
-            this.Name = name;
-        }
-
-        public override string ToString()
-        {
-            return Name;
-        }
     }
 
     enum Step
