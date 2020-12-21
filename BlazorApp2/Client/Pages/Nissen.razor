@@ -3,6 +3,8 @@
 @using BlazorApp2.Shared;
 @inject IJSRuntime JSRuntime;
 
+<audio id="nissesound" src="/nissen.mp3" />
+
 @if (currentStep == Step.ParticipantRegistration)
 {
     <div>
@@ -26,7 +28,7 @@
 
         <form @onsubmit="OnRegisterNumberClick">
             <input type="number" @bind="numberInput" />
-            <input type="submit" value="Registrer gave" class="btn btn-primary" />
+            <input type="submit" value="Registrer gave" class="btn btn-primary" onclick="document.getElementById('nissesound').play()" />
         </form>
     }
     else
@@ -87,13 +89,13 @@
 
     public Nissen()
     {
-        currentStep = Step.NumberRegistration;
-        participants.Add(new Participant("Per") { OwnNumber = null, AssignedNumber = null });
-        participants.Add(new Participant("Kari") { OwnNumber = null, AssignedNumber = null });
-        participants.Add(new Participant("Kjell") { OwnNumber = null, AssignedNumber = null });
-        participants.Add(new Participant("Satan") { OwnNumber = null, AssignedNumber = null });
-        participants.Add(new Participant("Bob") { OwnNumber = null, AssignedNumber = null });
-        participants.Add(new Participant("Donald") { OwnNumber = null, AssignedNumber = null });
+        //currentStep = Step.NumberRegistration;
+        //participants.Add(new Participant("Per") { OwnNumber = 1, AssignedNumber = 2 });
+        //participants.Add(new Participant("Kari") { OwnNumber = 2, AssignedNumber = null });
+        //participants.Add(new Participant("Kjell") { OwnNumber = 3, AssignedNumber = null });
+        //participants.Add(new Participant("Satan") { OwnNumber = 4, AssignedNumber = null });
+        //participants.Add(new Participant("Bob") { OwnNumber = 5, AssignedNumber = null });
+        //participants.Add(new Participant("Donald") { OwnNumber = 6, AssignedNumber = null });
     }
 
     private void OnAddParticipantSubmit()

@@ -7,8 +7,14 @@ namespace BlazorApp2.Shared
 {
     public static class Logic
     {
-        public static string AssignRandom(List<Participant> participants)
+        public static string AssignRandom(List<Participant> participants, int retryCount = 0)
         {
+            if (retryCount >= 100)
+            {
+                Console.WriteLine("Exceeded retry count limit");
+                return $"Exceeded retry count limit ({retryCount}). Aborting";
+            }
+
             if (participants.Select(p => p.OwnNumber).Distinct().Count() != participants.Count())
             {
                 participants.ForEach(p => p.OwnNumber = null);
@@ -17,19 +23,23 @@ namespace BlazorApp2.Shared
 
             var random = new Random();
             var alreadyAssignedNumbers = participants.Where(p => p.AssignedNumber != null).Select(p => p.AssignedNumber);
-            var numbers = participants.Select(p => p.OwnNumber).Except(alreadyAssignedNumbers).ToList();
+            var availableNumbers = participants.Select(p => p.OwnNumber).Except(alreadyAssignedNumbers).ToList();
 
             foreach (var participant in participants.Where(p => p.AssignedNumber == null))
             {
-                var potentialNumbers = numbers.Where(n => n != participant.OwnNumber).ToList();
-                if (potentialNumbers.Count == 0)
+                var candidateNumbers = availableNumbers.Where(n => n != participant.OwnNumber).ToList();
+                if (candidateNumbers.Count == 0)
                 {
                     Console.WriteLine("Retry");
-                    return AssignRandom(participants);
+                    return AssignRandom(participants, retryCount + 1);
                 }
-                var selection = potentialNumbers[random.Next(potentialNumbers.Count)] ?? -1;
-                numbers.Remove(selection);
-                participant.AssignedNumber = selection;
+                var selection = candidateNumbers[random.Next(candidateNumbers.Count)] ?? -1;
+                availableNumbers.Remove(selection);
+                participant.CandidateNumber = selection;
+            }
+            foreach (var participant in participants.Where(p => p.AssignedNumber == null))
+            {
+                participant.AssignedNumber = participant.CandidateNumber;
             }
 
             var errorMessage = ErrorCheck(participants);
