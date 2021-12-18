@@ -350,3 +350,4 @@ MigrationBackup/
 .ionide/
 /KittyScraper/Properties/launchSettings.json
 /cnstrings.txt
+/BlazorApp2/Server/Properties/ServiceDependencies/NissenServer - Web Deploy/profile.arm.json

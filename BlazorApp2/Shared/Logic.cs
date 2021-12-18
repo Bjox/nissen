@@ -7,42 +7,35 @@ namespace BlazorApp2.Shared
 {
     public static class Logic
     {
-        public static string AssignRandom(List<Participant> participants, int retryCount = 0)
+        public static string AssignRandom(List<Participant> participants)
         {
-            if (retryCount >= 100)
-            {
-                Console.WriteLine("Exceeded retry count limit");
-                return $"Exceeded retry count limit ({retryCount}). Aborting";
-            }
-
             if (participants.Select(p => p.OwnNumber).Distinct().Count() != participants.Count())
             {
                 participants.ForEach(p => p.OwnNumber = null);
                 return "Noen skrev inn samme tall";
             }
 
-            var random = new Random();
-            var alreadyAssignedNumbers = participants.Where(p => p.AssignedNumber != null).Select(p => p.AssignedNumber);
-            var availableNumbers = participants.Select(p => p.OwnNumber).Except(alreadyAssignedNumbers).ToList();
+            var nonPreAssignedParticipants = participants.Where(p => p.AssignedNumber == null).ToList();
+            var preAssignments = participants.Where(p => p.AssignedNumber != null).ToDictionary(p => p.Name, p => p.AssignedNumber.Value);
 
-            foreach (var participant in participants.Where(p => p.AssignedNumber == null))
+            // assign everyone their own number
+            foreach (var participant in participants)
             {
-                var candidateNumbers = availableNumbers.Where(n => n != participant.OwnNumber).ToList();
-                if (candidateNumbers.Count == 0)
-                {
-                    Console.WriteLine("Retry");
-                    return AssignRandom(participants, retryCount + 1);
-                }
-                var selection = candidateNumbers[random.Next(candidateNumbers.Count)] ?? -1;
-                availableNumbers.Remove(selection);
-                participant.CandidateNumber = selection;
-            }
-            foreach (var participant in participants.Where(p => p.AssignedNumber == null))
-            {
-                participant.AssignedNumber = participant.CandidateNumber;
+                participant.AssignedNumber = participant.OwnNumber;
             }
 
-            var errorMessage = ErrorCheck(participants);
+            // assign pre-assignments by swapping
+            foreach (var assignment in preAssignments)
+            {
+                var participant = participants.Single(p => p.Name == assignment.Key);
+                var participantToSwapWith = participants.Single(p => p.AssignedNumber == assignment.Value);
+                participantToSwapWith.AssignedNumber = participant.AssignedNumber;
+                participant.AssignedNumber = assignment.Value;
+            }
+
+            FisherYatesShuffle(nonPreAssignedParticipants);
+
+            var errorMessage = ErrorCheck(participants, preAssignments);
             if (!string.IsNullOrEmpty(errorMessage))
             {
                 participants.ForEach(p => p.OwnNumber = null);
@@ -52,7 +45,20 @@ namespace BlazorApp2.Shared
             return null;
         }
 
-        public static string ErrorCheck(List<Participant> participants)
+        private static void FisherYatesShuffle(List<Participant> participants)
+        {
+            // fisher-yates inspired shuffle, but cannot swap with itself
+            var random = new Random();
+            for (int i = 0; i < participants.Count - 1; i++)
+            {
+                var swapWith = random.Next(i + 1, participants.Count);
+                var thisAssignedNumber = participants[i].AssignedNumber;
+                participants[i].AssignedNumber = participants[swapWith].AssignedNumber;
+                participants[swapWith].AssignedNumber = thisAssignedNumber;
+            }
+        }
+
+        private static string ErrorCheck(List<Participant> participants, Dictionary<string, int> preAssignments)
         {
             if (participants.Any(p => p.OwnNumber == null))
             {
@@ -74,11 +80,19 @@ namespace BlazorApp2.Shared
             {
                 return "Noen har fått samme gave";
             }
+            foreach (var preAssignment in preAssignments)
+            {
+                if (participants.Single(p => p.Name == preAssignment.Key).AssignedNumber != preAssignment.Value)
+                {
+                    return $"Tildeling ikke mulig ({preAssignment.Key})";
+                }
+            }
+
             var ownNumbers = new HashSet<int?>(participants.Select(p => p.OwnNumber));
             var assignedNumbers = new HashSet<int?>(participants.Select(p => p.AssignedNumber));
             if (!ownNumbers.SetEquals(assignedNumbers))
             {
-                return "Registrering er ulik tildelte nummer";
+                return "Internal error: assigned numbers does not match registered numbers";
             }
             return null;
         }
