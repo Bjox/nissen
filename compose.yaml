@@ -1,0 +1,6 @@
+services:
+  nissen:
+    image: bjox/nissen
+    build: .
+    ports:
+      - 80:80
