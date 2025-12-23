@@ -1,6 +1,7 @@
 services:
   nissen:
     image: bjox/nissen
+    container_name: nissen
     build: .
     ports:
       - 80:80
